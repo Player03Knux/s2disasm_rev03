@@ -31717,7 +31717,7 @@ Touch_Rings:
 +
 	cmpa.l	a1,a2	; are there no rings in this area?
 	beq.w	Touch_Rings_Done	; if so, return
-	cmpi.w	#$5A,invulnerable_time(a0)
+	cmpi.b	#$5A,invulnerable_time(a0)
 	bhs.w	Touch_Rings_Done
 	move.w	x_pos(a0),d2
 	move.w	y_pos(a0),d3
@@ -35954,9 +35954,9 @@ Obj01_Modes:	offsetTable
 
 ; loc_1A0C6:
 Sonic_Display:
-	move.w	invulnerable_time(a0),d0
+	move.b	invulnerable_time(a0),d0
 	beq.s	Obj01_Display
-	subq.w	#1,invulnerable_time(a0)
+	subq.b	#1,invulnerable_time(a0)
 	lsr.w	#3,d0
 	bcc.s	Obj01_ChkInvin
 ; loc_1A0D4:
@@ -37081,7 +37081,7 @@ Sonic_JumpHeight:
 	move.w	d1,y_vel(a0)	; immediately reduce Sonic's upward speed to d1
 +
 	tst.b	y_vel(a0)		; is Sonic exactly at the height of his jump?
-	beq.s	Sonic_CheckGoSuper	; if yes, test for turning into Super Sonic
+	beq.w	Sonic_CheckGoSuper	; if yes, test for turning into Super Sonic
 	rts
 ; ---------------------------------------------------------------------------
 ; loc_1AB22:
@@ -37196,6 +37196,49 @@ return_1AC3C:
 	rts
 ; End of subroutine Sonic_Super
 
+Tails_Super:
+	cmpi.w	#2,(Player_mode).w
+	bne.w	return_1AC3C
+	tst.b	(Super_Sonic_flag).w	; Ignore all this code if not Super Sonic
+	beq.w	return_1AC3C
+	tst.b	(Update_HUD_timer).w
+	beq.s	Tails_RevertToNormal ; ?
+	subq.w	#1,(Super_Sonic_frame_count).w
+	bpl.w	return_1AC3C
+	move.w	#60,(Super_Sonic_frame_count).w	; Reset frame counter to 60
+	tst.w	(Ring_count).w
+	beq.s	Tails_RevertToNormal
+	ori.b	#1,(Update_HUD_rings).w
+	cmpi.w	#1,(Ring_count).w
+	beq.s	+
+	cmpi.w	#10,(Ring_count).w
+	beq.s	+
+	cmpi.w	#100,(Ring_count).w
+	bne.s	++
++
+	ori.b	#$80,(Update_HUD_rings).w
++
+	subq.w	#1,(Ring_count).w
+	bne.s	return_1AC3C
+; loc_1ABF2:
+Tails_RevertToNormal:
+	move.b	#2,(Super_Sonic_palette).w	; Remove rotating palette
+	move.w	#$28,(Palette_frame).w
+	move.b	#0,(Super_Sonic_flag).w
+	move.b	#AniIDSonAni_Run,prev_anim(a0)	; Force Sonic's animation to restart
+	move.w	#1,invincibility_time(a0)	; Remove invincibility
+	move.w	#$600,(Tails_top_speed).w
+	move.w	#$C,(Tails_acceleration).w
+	move.w	#$80,(Tails_deceleration).w
+	btst	#status.player.underwater,status(a0)	; Check if underwater, return if not
+	beq.s	return_1AC3CT
+	move.w	#$300,(Tails_top_speed).w
+	move.w	#6,(Tails_acceleration).w
+	move.w	#$40,(Tails_deceleration).w
+
+return_1AC3CT:
+	rts
+; End of subroutine Sonic_Super
 ; ---------------------------------------------------------------------------
 ; Subroutine to check for starting to charge a spindash
 ; ---------------------------------------------------------------------------
@@ -37844,7 +37887,7 @@ Sonic_HurtStop:
 	move.b	d0,obj_control(a0)
 	move.b	#AniIDSonAni_Walk,anim(a0)
 	subq.b	#2,routine(a0)	; => Obj01_Control
-	move.w	#$78,invulnerable_time(a0)
+	move.b	#$78,invulnerable_time(a0)
 	move.b	#0,spindash_flag(a0)
 
 return_1B1C8:
@@ -38493,7 +38536,7 @@ return_1B89A:
 ; ----------------------------------------------------------------------------
 ; Object 02 - Tails
 ; ----------------------------------------------------------------------------
-; Sprite_1B8A4: Object_Tails:
+; Sprite_1B8A4: Object_Tails: ;TailsPlayer
 Obj02:
 	; a0=character
 	cmpi.w	#2,(Player_mode).w
@@ -38604,6 +38647,7 @@ Obj02_Control_Part2:
 	andi.w	#$7FF,y_pos(a0)			; perform wrapping of Sonic's y position
 +
 	bsr.s	Tails_Display
+	bsr.w	Tails_Super
 	bsr.w	Tails_RecordPos
 	bsr.w	Tails_Water
 	move.b	(Primary_Angle).w,next_tilt(a0)
@@ -38635,9 +38679,9 @@ Obj02_Modes:	offsetTable
 
 ; loc_1BA56:
 Tails_Display:
-	move.w	invulnerable_time(a0),d0
+	move.b	invulnerable_time(a0),d0
 	beq.s	Obj02_Display
-	subq.w	#1,invulnerable_time(a0)
+	subq.b	#1,invulnerable_time(a0)
 	lsr.w	#3,d0
 	bcc.s	Obj02_ChkInvinc
 ; loc_1BA64:
@@ -39235,6 +39279,8 @@ Obj02_MdNormal:
 ; Called if Tails is airborne, but not in a ball (thus, probably not jumping)
 ; loc_1C032: Obj02_MdJump
 Obj02_MdAir:
+	tst.b	double_jump_flag(a0)
+	bne.w	Tails_FlyingSwimming
 	bsr.w	Tails_JumpHeight
 	bsr.w	Tails_ChgJumpDir
 	bsr.w	Tails_LevelBound
@@ -39271,6 +39317,14 @@ Obj02_MdRoll:
 ;        Why they gave it a separate copy of the code, I don't know.
 ; loc_1C082: Obj02_MdJump2:
 Obj02_MdJump:
+		;tst.b	(Flying_carrying_Sonic_flag).w
+		;beq.s	loc_155C6T
+		;lea	(MainCharacter).w,a1
+		;clr.b	obj_control(a1)
+		;bset	#Status_InAir,status(a1)
+		;clr.w	(Flying_carrying_Sonic_flag).w
+
+loc_155C6T:
 	bsr.w	Tails_JumpHeight
 	bsr.w	Tails_ChgJumpDir
 	bsr.w	Tails_LevelBound
@@ -40044,18 +40098,20 @@ Tails_JumpHeight:
 	move.w	#-$200,d1
 +
 	cmp.w	y_vel(a0),d1	; is Tails going up faster than d1?
-	ble.s	+		; if not, branch
+	ble.s	Tails_InstaAndShieldMoves		; if not, branch
 	move.b	(Ctrl_2_Held_Logical).w,d0
 	andi.b	#button_B_mask|button_C_mask|button_A_mask,d0 ; is a jump button pressed?
 	bne.s	+		; if yes, branch
 	move.w	d1,y_vel(a0)	; immediately reduce Tails's upward speed to d1
 +
+	tst.b	y_vel(a0)		; is Sonic exactly at the height of his jump?
+	beq.w	Sonic_CheckGoSuper	; if yes, test for turning into Super Sonic
 	rts
 ; ---------------------------------------------------------------------------
 ; loc_1C6F8:
 Tails_UpVelCap:
 	tst.b	pinball_mode(a0)	; is Tails charging a spindash or in a rolling-only area?
-	bne.s	return_1C70C		; if yes, return
+	bne.s	Tails_InstaAndShieldMoves2		; if yes, return
 	cmpi.w	#-$FC0,y_vel(a0)	; is Tails moving up really fast?
 	bge.s	return_1C70C		; if not, return
 	move.w	#-$FC0,y_vel(a0)	; cap upward speed
@@ -40063,6 +40119,212 @@ Tails_UpVelCap:
 return_1C70C:
 	rts
 ; End of subroutine Tails_JumpHeight
+
+Tails_InstaAndShieldMoves:
+		tst.b	y_vel(a0)		; is Sonic exactly at the height of his jump?
+		beq.w	Tails_CheckGoSuper	; if yes, test for turning into Super Sonic
+Tails_InstaAndShieldMoves2:
+		tst.b	double_jump_flag(a0)
+		bne.w	locret_15CDA
+		move.b	(Ctrl_2_Press_Logical).w,d0
+		andi.b	#button_A_mask|button_B_mask|button_C_mask,d0
+		beq.w	locret_15CDA
+		cmpi.w	#2,(Player_mode).w
+		beq.s	loc_15C9C
+		tst.w	(Tails_control_counter).w
+		beq.s	locret_15CDA
+
+loc_15C9C:
+		btst	#Status_Roll,status(a0)
+		beq.s	loc_15CC4
+		bclr	#Status_Roll,status(a0)
+		;move.b	(obHeight+Sidekick).w,d1
+		;move.b	#$F,(obHeight+Sidekick).w
+		;move.b	#9,(obWidth+Sidekick).w
+		;sub.b	#$13,d1
+		;ext.w	d1
+		;add.w	d1,y_pos(a0)
+
+loc_15CC4:
+		bclr	#Status_RollJump,status(a0)
+		move.b	#1,double_jump_flag(a0)
+		move.b	#(8*60)/2,double_jump_property(a0)
+		bsr.w	Tails_Set_Flying_Animation
+
+locret_15CDA:
+		rts
+Tails_CheckGoSuper:
+	tst.b	(Super_Sonic_flag).w	; is Sonic already Super?
+	bne.s	return_1ABA4T		; if yes, branch
+	cmpi.b	#7,(Emerald_count).w	; does Sonic have exactly 7 emeralds?
+	bne.s	return_1ABA4T		; if not, branch
+	cmpi.w	#50,(Ring_count).w	; does Sonic have at least 50 rings?
+	blo.s	return_1ABA4T		; if not, branch
+    if gameRevision>=2
+	; fixes a bug where the player can get stuck if transforming at the end of a level
+	tst.b	(Update_HUD_timer).w	; has Sonic reached the end of the act?
+	beq.s	return_1ABA4T		; if yes, branch
+    endif
+
+    if fixBugs
+	; If Sonic was executing a roll-jump when he turned Super, then this
+	; will remove him from that state. The original code forgot to do
+	; this.
+	andi.b	#~(1<<status.player.rolling|1<<status.player.rolljumping),status(a0)	; Clear bits 2 and 4
+	move.b	#$13,y_radius(a0)
+	move.b	#9,x_radius(a0)
+    endif
+	move.b	#1,(Super_Sonic_palette).w
+	move.b	#$F,(Palette_timer).w
+	move.b	#1,(Super_Sonic_flag).w
+	move.b	#$81,obj_control(a0)
+	move.b	#$29,anim(a0)			; use transformation animation
+	move.b	#ObjID_SuperSonicStars,(SuperSonicStars+id).w ; load Obj7E (Super Sonic stars object) at $FFFFD040
+	move.w	#$A00,(Tails_top_speed).w
+	move.w	#$30,(Tails_acceleration).w
+	move.w	#$100,(Tails_deceleration).w
+	move.w	#0,invincibility_time(a0)
+	bset	#status_secondary.invincible,status_secondary(a0)	; make Sonic invincible
+	move.w	#SndID_SuperTransform,d0
+	jsr	(PlaySound).l	; Play transformation sound effect.
+	move.w	#MusID_SuperSonic,d0
+	jmp	(PlayMusic).l	; load the Super Sonic song and return
+
+; ---------------------------------------------------------------------------
+return_1ABA4T:
+	jmp	(Tails_InstaAndShieldMoves2).l
+	rts
+; End of subroutine Sonic_CheckGoSuper
+Tails_FlyingSwimming:
+		bsr.w	Tails_Move_FlySwim
+		bsr.w	Tails_ChgJumpDir
+		bsr.w	Tails_LevelBound
+		jsr	(ObjectMove).l
+		bsr.w	Tails_JumpAngle
+		movem.l	a4-a6,-(sp)
+		bsr.w	Tails_DoLevelCollision
+		movem.l	(sp)+,a4-a6
+		cmpi.w	#2,(Player_mode).w
+		beq.s	locret_15438
+		;lea	(Flying_carrying_Sonic_flag).w,a2
+		lea	(MainCharacter).w,a1
+		move.w	(Ctrl_1).w,d0
+		;bsr.w	Tails_Carry_Sonic
+
+locret_15438:
+		rts
+Tails_Move_FlySwim:
+		move.b	(Level_frame_counter+1).w,d0
+		andi.b	#1,d0
+		beq.s	loc_1544E
+		tst.b	double_jump_property(a0)
+		beq.s	loc_1544E
+		subq.b	#1,double_jump_property(a0)
+
+loc_1544E:
+		cmpi.b	#1,double_jump_flag(a0)
+		beq.s	loc_15478
+		cmpi.w	#-$100,y_vel(a0)
+		blt.s	loc_15470
+		subi.w	#$20,y_vel(a0)
+		addq.b	#1,double_jump_flag(a0)
+		cmpi.b	#$20,double_jump_flag(a0)
+		bne.s	loc_15476
+
+loc_15470:
+		move.b	#1,double_jump_flag(a0)
+
+loc_15476:
+		bra.s	loc_154AA
+loc_15478:
+		move.b	(Ctrl_2_Press_Logical).w,d0
+		andi.b	#button_A_mask|button_B_mask|button_C_mask,d0
+		beq.s	loc_154A4
+		cmpi.w	#-$100,y_vel(a0)
+		blt.s	loc_154A4
+		tst.b	double_jump_property(a0)
+		beq.s	loc_154A4
+		btst	#Status_Underwater,status(a0)
+		beq.s	loc_1549E
+		;tst.b	(Flying_carrying_Sonic_flag).w
+		;bne.s	loc_154A4
+
+loc_1549E:
+		move.b	#2,double_jump_flag(a0)
+
+loc_154A4:
+		addi.w	#8,y_vel(a0)
+
+loc_154AA:
+		move.w	(Camera_Min_Y_pos).w,d0
+		addi.w	#$10,d0
+		cmp.w	y_pos(a0),d0
+		blt.s	Tails_Set_Flying_Animation
+		tst.w	y_vel(a0)
+		bpl.s	Tails_Set_Flying_Animation
+		move.w	#0,y_vel(a0)
+Tails_Set_Flying_Animation:
+		btst	#Status_Underwater,status(a0)
+		bne.s	loc_1552C
+		moveq	#$20,d0
+		tst.w	y_vel(a0)
+		bpl.s	loc_154DC
+		moveq	#$21,d0
+
+loc_154DC:
+		;tst.b	(Flying_carrying_Sonic_flag).w
+		;beq.s	loc_154E4
+		;addq.b	#2,d0
+
+loc_154E4:
+		tst.b	double_jump_property(a0)
+		bne.s	loc_1550C
+		moveq	#$24,d0
+		move.b	d0,anim(a0)
+		tst.b	render_flags(a0)
+		bpl.s	locret_1550A
+		move.b	(Level_frame_counter+1).w,d0
+		addq.b	#8,d0
+		andi.b	#$F,d0
+		bne.s	locret_1550A
+		;moveq	#signextendB(sfx_FlyTired),d0
+		;jsr	(Play_SFX).l
+
+locret_1550A:
+		rts
+loc_1550C:
+		move.b	d0,anim(a0)
+		tst.b	render_flags(a0)
+		bpl.s	locret_1552A
+		move.b	(Level_frame_counter+1).w,d0
+		addq.b	#8,d0
+		andi.b	#$F,d0
+		bne.s	locret_1552A
+		;moveq	#signextendB(sfx_Flying),d0
+		;jsr	(Play_SFX).l
+
+locret_1552A:
+		rts
+loc_1552C:
+		moveq	#$25,d0
+		tst.w	y_vel(a0)
+		bpl.s	loc_15536
+		moveq	#$26,d0
+
+loc_15536:
+		;tst.b	(Flying_carrying_Sonic_flag).w
+		;beq.s	loc_1553E
+		;moveq	#$27,d0
+
+loc_1553E:
+		tst.b	double_jump_property(a0)
+		bne.s	loc_15546
+		moveq	#$28,d0
+
+loc_15546:
+		move.b	d0,anim(a0)
+		rts
+; End of function Tails_Set_Flying_Animation
 
 ; ---------------------------------------------------------------------------
 ; Subroutine to check for starting to charge a spindash
@@ -40632,6 +40894,7 @@ Tails_ResetOnFloor_Part3:
 	move.b	#AniIDSonAni_Walk,anim(a0)
 
 return_1CBC4:
+		move.b	#0,double_jump_flag(a0)
 	rts
 ; End of subroutine Tails_ResetOnFloor
 
@@ -40690,7 +40953,7 @@ Tails_HurtStop:
 	move.b	d0,obj_control(a0)
 	move.b	#AniIDSonAni_Walk,anim(a0)
 	move.b	#2,routine(a0)	; => Obj02_Control
-	move.w	#$78,invulnerable_time(a0)
+	move.b	#$78,invulnerable_time(a0)
 	move.b	#0,spindash_flag(a0)
 
 return_1CC4E:
@@ -41097,7 +41360,7 @@ loc_1D006:
 ; ---------------------------------------------------------------------------
 ; Animation script - Tails
 ; ---------------------------------------------------------------------------
-; off_1D038:
+; off_1D038: ;Ani_Tails:
 TailsAniData:		offsetTable
 			offsetTableEntry.w TailsAni_Walk	;  0 ;   0
 			offsetTableEntry.w TailsAni_Run		;  1 ;   1
@@ -41132,6 +41395,15 @@ TailsAniData:		offsetTable
 			offsetTableEntry.w TailsAni_Dummy5	; 30 ; $1E
 TailsAni_HaulAss_ptr:	offsetTableEntry.w TailsAni_HaulAss	; 31 ; $1F
 TailsAni_Fly_ptr:	offsetTableEntry.w TailsAni_Fly		; 32 ; $20
+			offsetTableEntry.w TailsAni_Fly		; 33 ; $21
+			offsetTableEntry.w TailsAni_CarrySonic		; 34 ; $22
+			offsetTableEntry.w TailsAni_CarryFlyUp		; 35 ; $23
+			offsetTableEntry.w TailsAni_Tired		; 36 ; $24
+			offsetTableEntry.w TailsAni_Swim		; 37 ; $25
+			offsetTableEntry.w TailsAni_Swim2		; 38 ; $26
+			offsetTableEntry.w TailsAni_SwimCarrySonic		; 39 ; $27
+			offsetTableEntry.w TailsAni_SwimTired		; 40 ; $28
+			offsetTableEntry.w TailsAni_Transform		; 41 ; $29
 
 TailsAni_Walk:	dc.b $FF,$10,$11,$12,$13,$14,$15, $E, $F,$FF
 	rev02even
@@ -41204,7 +41476,22 @@ TailsAni_HaulAss:	dc.b $FF,$32,$33,$FF
 	rev02even
 TailsAni_Fly:		dc.b   1,$5E,$5F,$FF
 	even
-
+TailsAni_CarrySonic:		dc.b   1,$97,$98,$FF
+	even
+TailsAni_CarryFlyUp:		dc.b   1,$99,$9A,$FF
+	even
+TailsAni_Tired:		dc.b   1,$90,$91,$90,$91,$90,$91,$92,$93,$92,$93,$92,$93,$FF
+	even
+TailsAni_Swim:		dc.b   7,$8B,$8C,$8D,$8E,$8F,$FF
+	even
+TailsAni_Swim2:		dc.b   3,$8B,$8C,$8D,$8E,$8F,$FF
+	even
+TailsAni_SwimCarrySonic:	dc.b    4, $A3, $A4, $FF
+	even
+TailsAni_SwimTired:	dc.b   $B, $C2, $CD, $CE, $FF
+	even
+TailsAni_Transform:	dc.b    2, $A5, $A5, $A1, $A2, $A1, $A2, $A1, $A2, $A1, $A2, $A1, $A2, $FD,   0
+	even
 ; ===========================================================================
 
 ; ---------------------------------------------------------------------------
@@ -41370,6 +41657,15 @@ Obj05AniSelection:
 	dc.b	0	; TailsAni_Blank	->
 	dc.b	0,0	; TailsAni_Dummy4,5	->
 	dc.b	0	; TailsAni_HaulAss	->
+	dc.b	0	; TailsAni_Fly		->
+	dc.b	0	; TailsAni_Fly		->
+	dc.b	0	; TailsAni_Fly		->
+	dc.b	0	; TailsAni_Fly		->
+	dc.b	0	; TailsAni_Fly		->
+	dc.b	0	; TailsAni_Fly		->
+	dc.b	0	; TailsAni_Fly		->
+	dc.b	0	; TailsAni_Fly		->
+	dc.b	0	; TailsAni_Fly		->
 	dc.b	0	; TailsAni_Fly		->
 	even
 
@@ -47087,7 +47383,7 @@ Obj14_UpdateMappingAndCollision:
 	move.b	width_pixels(a0),d1
 	moveq	#8,d3
 	move.w	(sp)+,d4
-	bra.w	SlopedPlatform
+	jmp	(SlopedPlatform).l
 ; ===========================================================================
 
 return_21A74:
@@ -84729,7 +85025,7 @@ Touch_ChkValue:
 	move.w	(MainCharacter+invulnerable_time).w,d0
 	tst.w	(Two_player_mode).w
 	beq.s	+
-	move.w	invulnerable_time(a0),d0
+	move.b	invulnerable_time(a0),d0
 +
 	cmpi.w	#90,d0
 	bhs.w	+
@@ -84951,7 +85247,7 @@ Hurt_Reverse:
 Hurt_ChkSpikes:
 	move.w	#0,inertia(a0)
 	move.b	#AniIDSonAni_Hurt2,anim(a0)
-	move.w	#$78,invulnerable_time(a0)
+	move.b	#$78,invulnerable_time(a0)
 	move.w	#SndID_Hurt,d0	; load normal damage sound
 	cmpi.b	#ObjID_Spikes,id(a2)	; was damage caused by spikes?
 	bne.s	Hurt_Sound	; if not, branch
@@ -85222,7 +85518,7 @@ BossCollision_MCZ:
 	move.w	(sp)+,d7
     endif
 	move.b	collision_flags(a1),d0
-	cmpi.w	#$78,invulnerable_time(a0)
+	cmpi.b	#$78,invulnerable_time(a0)
 	bne.s	+	; rts
 	st.b	boss_hurt_sonic(a1)	; Sonic has just been hurt flag
 +
@@ -85247,7 +85543,7 @@ BossCollision_MCZ2:
 	beq.s	-			; jump back once for second check
 	move.w	(sp)+,d7
 	move.b	collision_flags(a1),d0
-	cmpi.w	#$78,invulnerable_time(a0)
+	cmpi.b	#$78,invulnerable_time(a0)
 	bne.s	+	; rts
 	st.b	boss_hurt_sonic(a1)	; Sonic has just been hurt flag
 +

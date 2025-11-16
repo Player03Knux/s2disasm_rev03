@@ -47,6 +47,7 @@ subtype =		$28
 ; conventions specific to Sonic/Tails (Obj01, Obj02, and ObjDB):
 ; note: $1F, $20, and $21 are unused and available (however, $1F is cleared by loc_A53A and ObjB2_Landed_on_plane)
 inertia =		$14 ; and $15 ; directionless representation of speed... not updated in the air
+double_jump_property =	$25
 flip_angle =		$27 ; angle about the x axis (360 degrees = 256) (twist/tumble)
 air_left =		$28
 flip_turned =		$29 ; 0 for normal, 1 to invert flipping (it's a 180 degree rotation about the axis of Sonic's spine, so he stays in the same position but looks turned around)
@@ -56,6 +57,7 @@ flips_remaining =	$2C ; number of flip revolutions remaining
 flip_speed =		$2D ; number of flip revolutions per frame / 256
 move_lock =		$2E ; and $2F ; horizontal control lock, counts down to 0
 invulnerable_time =	$30 ; and $31 ; time remaining until you stop blinking
+double_jump_flag =	$31
 invincibility_time =	$32 ; and $33 ; remaining
 speedshoes_time =	$34 ; and $35 ; remaining
 next_tilt =		$36 ; angle on ground in front of sprite
@@ -2637,3 +2639,23 @@ ArtTile_ArtNem_BigRing_Flash          = $0462
 ArtTile_ArtNem_EndPoints              = $04B6
 ArtTile_ArtNem_BreakWall              = $0590
 ArtTile_ArtNem_GHZ_Purple_Rock        = $06C0
+
+; S3 Constants
+; ---------------------------------------------------------------------------
+; Player Status Variables
+Status_Facing       = 0
+Status_InAir        = 1
+Status_Roll         = 2
+Status_OnObj        = 3
+Status_RollJump     = 4
+Status_Push         = 5
+Status_Underwater   = 6
+; ---------------------------------------------------------------------------
+; Player status_secondary variables
+Status_Shield       = 0
+Status_Invincible   = 1
+Status_SpeedShoes   = 2
+
+Status_FireShield   = 4
+Status_LtngShield   = 5
+Status_BublShield   = 6
