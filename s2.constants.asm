@@ -8,6 +8,61 @@ Size_of_DAC_samples =		$2F00
 Size_of_SEGA_sound =		$6174
 Size_of_Snd_driver_guess =	$F64 ; approximate post-compressed size of the Z80 sound driver
 
+
+
+
+Obj_Id                         = id
+Obj_Flags                      = render_flags
+Obj_Art_VRAM                   = art_tile
+Obj_Map                        = mappings
+Obj_X                          = x_pos
+Obj_Sub_Y                      = x_sub
+Obj_Y                          = y_pos
+Obj_Speed                      = x_vel
+Obj_Speed_Y                    = y_vel
+Obj_Inertia                    = inertia
+Obj_Height_2                   = y_radius
+Obj_Width_2                    = x_radius
+Obj_Priority                   = priority
+Obj_Width                      = width_pixels
+Obj_Map_Id                     = mapping_frame
+Obj_Ani_Frame                  = anim_frame
+Obj_Ani_Number                 = anim
+Obj_Ani_Flag                   = prev_anim
+Obj_Ani_Time                   = anim_frame_duration
+Obj_Ani_Time_2                 = anim_frame_duration+1
+Obj_Col_Flags                  = collision_flags
+Obj_Col_Prop                   = collision_property
+Obj_Status                     = status
+Obj_Respaw_Ref                 = respawn_index
+Obj_Routine                    = routine
+Obj_Routine_2                  = routine_secondary
+Obj_Angle                      = angle
+Obj_Flip_Angle                 = flip_angle
+Obj_Subtype                    = subtype
+Obj_Timer                      = obj_control
+
+Obj_Control_Var_00             = $002C
+Obj_Control_Var_01             = $002D
+Obj_Control_Var_02             = $002E
+Obj_Control_Var_03             = $002F
+Obj_Control_Var_04             = $0030
+Obj_Control_Var_05             = $0031
+Obj_Control_Var_06             = $0032
+Obj_Control_Var_07             = $0033  
+Obj_Control_Var_08             = $0034
+Obj_Control_Var_09             = $0035
+Obj_Control_Var_0A             = $0036
+Obj_Control_Var_0B             = $0037
+Obj_Control_Var_0C             = $0038
+Obj_Control_Var_0D             = $0039
+Obj_Control_Var_0E             = $003A
+Obj_Control_Var_0F             = $003B
+Obj_Control_Var_10             = $003C
+Obj_Control_Var_11             = $003D
+Obj_Control_Var_12             = $003E
+Obj_Control_Var_13             = $003F
+
 ; ---------------------------------------------------------------------------
 ; Object Status Table offsets (for everything between Object_RAM and Primary_Collision)
 ; ---------------------------------------------------------------------------
